@@ -370,16 +370,6 @@ static func decrypt(data: Data, with key: Key) throws -> String
 4. **Thread Safety**: All operations are thread-safe and can be used concurrently
 5. **No Authentication**: These methods provide confidentiality only, not authentication
 
-## Performance
-
-- Optimized pure Swift implementation
-- No heap allocations in hot paths
-- Suitable for high-throughput applications
-- Benchmark results (M1 MacBook Pro):
-  - Deterministic: ~30,000 ops/sec
-  - ND mode: ~25,000 ops/sec
-  - NDX mode: ~20,000 ops/sec
-
 ## Testing
 
 Run the test suite:
