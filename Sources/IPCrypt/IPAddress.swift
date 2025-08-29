@@ -2,7 +2,7 @@ import Foundation
 import Network
 
 /// Internal representation of an IP address for cryptographic operations
-internal enum IPAddress {
+internal enum IPAddress: Equatable {
     case v4(Data)
     case v6(Data)
 
@@ -55,6 +55,10 @@ internal enum IPAddress {
             return "\(v6)"
         }
     }
+
+    var description: String {
+        stringValue
+    }
 }
 
 // MARK: - Data Hex Extensions
@@ -71,6 +75,11 @@ public extension Data {
     /// ```
     func toHexString() -> String {
         map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Computed property alias for toHexString()
+    var hexString: String {
+        toHexString()
     }
 
     /// Initialize data from a hexadecimal string.
