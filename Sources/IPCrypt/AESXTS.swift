@@ -1,13 +1,13 @@
 import Foundation
 
-struct AESXTS {
+enum AESXTS {
     static func xorData(_ a: Data, _ b: Data) -> Data {
         guard a.count == b.count else { return Data() }
         return Data(zip(a, b).map { $0 ^ $1 })
     }
 
     static func encrypt(key: Data, tweak: Data, plaintext: Data) -> Data {
-        guard key.count == 32 && tweak.count == 16 && plaintext.count == 16 else {
+        guard key.count == 32, tweak.count == 16, plaintext.count == 16 else {
             return Data()
         }
 
@@ -23,7 +23,7 @@ struct AESXTS {
     }
 
     static func decrypt(key: Data, tweak: Data, ciphertext: Data) -> Data {
-        guard key.count == 32 && tweak.count == 16 && ciphertext.count == 16 else {
+        guard key.count == 32, tweak.count == 16, ciphertext.count == 16 else {
             return Data()
         }
 

@@ -91,7 +91,6 @@
 --tabwidth unspecified
 --trimwhitespace always
 --wraparguments preserve
---wrapattributes preserve
 --wrapcollections preserve
 --wrapparameters preserve
 --xcodeindentation disabled

@@ -1,10 +1,14 @@
 import Foundation
 import Network
 
+// MARK: - IPAddress
+
 /// Internal representation of an IP address for cryptographic operations
-internal enum IPAddress: Equatable {
+enum IPAddress: Equatable {
     case v4(Data)
     case v6(Data)
+
+    // MARK: Lifecycle
 
     init(_ string: String) throws {
         if let v4 = IPv4Address(string) {
@@ -24,32 +28,22 @@ internal enum IPAddress: Equatable {
         let prefix = bytes16[0..<10]
         let mappingBytes = bytes16[10..<12]
 
-        if prefix == Data(repeating: 0, count: 10) && mappingBytes == Data([0xFF, 0xFF]) {
+        if prefix == Data(repeating: 0, count: 10), mappingBytes == Data([0xFF, 0xFF]) {
             self = .v4(bytes16[12..<16])
         } else {
             self = .v6(bytes16)
         }
     }
 
-    func to16Bytes() -> Data {
-        switch self {
-        case .v4(let data):
-            var result = Data(repeating: 0, count: 10)
-            result.append(contentsOf: [0xFF, 0xFF])
-            result.append(data)
-            return result
-        case .v6(let data):
-            return data
-        }
-    }
+    // MARK: Internal
 
     var stringValue: String {
         switch self {
-        case .v4(let data):
+        case let .v4(data):
             guard data.count == 4 else { return "" }
             guard let v4 = IPv4Address(data) else { return "" }
             return "\(v4)"
-        case .v6(let data):
+        case let .v6(data):
             guard data.count == 16 else { return "" }
             guard let v6 = IPv6Address(data) else { return "" }
             return "\(v6)"
@@ -58,6 +52,18 @@ internal enum IPAddress: Equatable {
 
     var description: String {
         stringValue
+    }
+
+    func to16Bytes() -> Data {
+        switch self {
+        case let .v4(data):
+            var result = Data(repeating: 0, count: 10)
+            result.append(contentsOf: [0xFF, 0xFF])
+            result.append(data)
+            return result
+        case let .v6(data):
+            return data
+        }
     }
 }
 

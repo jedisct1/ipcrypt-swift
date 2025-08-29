@@ -1,6 +1,6 @@
 import Foundation
-import Network
 import IPCrypt
+import Network
 
 func printUsage() {
     print("""
@@ -60,7 +60,7 @@ do {
 
 // Parse optional tweak
 let tweak: Data?
-if CommandLine.arguments.count > 5 && mode != .deterministic {
+if CommandLine.arguments.count > 5, mode != .deterministic {
     guard let tweakData = Data(hexString: CommandLine.arguments[5]) else {
         print("Error: Invalid tweak hex string")
         exit(1)
@@ -125,10 +125,14 @@ do {
     exit(1)
 }
 
+// MARK: - IPAddress
+
 // Helper to access internal IPAddress type
 private enum IPAddress {
     case v4(Data)
     case v6(Data)
+
+    // MARK: Lifecycle
 
     init(_ string: String) throws {
         if let v4 = IPv4Address(string) {
@@ -140,14 +144,16 @@ private enum IPAddress {
         }
     }
 
+    // MARK: Internal
+
     func to16Bytes() -> Data {
         switch self {
-        case .v4(let data):
+        case let .v4(data):
             var result = Data(repeating: 0, count: 10)
             result.append(contentsOf: [0xFF, 0xFF])
             result.append(data)
             return result
-        case .v6(let data):
+        case let .v6(data):
             return data
         }
     }

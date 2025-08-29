@@ -1,6 +1,6 @@
 import Foundation
 
-struct KIASUBC {
+enum KIASUBC {
     static func padTweak(_ tweak: Data) -> Data {
         guard tweak.count == 8 else { return Data(count: 16) }
 
@@ -20,7 +20,7 @@ struct KIASUBC {
     }
 
     static func encrypt(key: Data, tweak: Data, plaintext: Data) -> Data {
-        guard key.count == 16 && tweak.count == 8 && plaintext.count == 16 else {
+        guard key.count == 16, tweak.count == 8, plaintext.count == 16 else {
             return Data()
         }
 
@@ -44,7 +44,7 @@ struct KIASUBC {
     }
 
     static func decrypt(key: Data, tweak: Data, ciphertext: Data) -> Data {
-        guard key.count == 16 && tweak.count == 8 && ciphertext.count == 16 else {
+        guard key.count == 16, tweak.count == 8, ciphertext.count == 16 else {
             return Data()
         }
 

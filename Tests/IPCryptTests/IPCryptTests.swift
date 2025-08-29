@@ -1,16 +1,11 @@
-import XCTest
 import Foundation
 @testable import IPCrypt
+import XCTest
+
+// MARK: - TestVector
 
 // Test vector structure
 struct TestVector: Codable {
-    let variant: String
-    let key: String
-    let ip: String
-    let encryptedIp: String?
-    let tweak: String?
-    let output: String?
-    
     enum CodingKeys: String, CodingKey {
         case variant
         case key
@@ -19,10 +14,21 @@ struct TestVector: Codable {
         case tweak
         case output
     }
+
+    let variant: String
+    let key: String
+    let ip: String
+    let encryptedIp: String?
+    let tweak: String?
+    let output: String?
 }
+
+// MARK: - IPCryptTests
 
 /// Tests for IPCrypt implementation
 final class IPCryptTests: XCTestCase {
+    // MARK: Internal
+
     // MARK: - Key Tests
 
     func testKeyCreation() throws {
@@ -33,8 +39,7 @@ final class IPCryptTests: XCTestCase {
 
         let key32 = try IPCrypt.Key(
             hexString: "0123456789abcdeffedcba98765432101032547698badcfeefcdab8967452301",
-            mode: .ndx
-        )
+            mode: .ndx)
         XCTAssertEqual(key32.data.count, 32)
         XCTAssertEqual(key32.mode, .ndx)
 
@@ -64,16 +69,16 @@ final class IPCryptTests: XCTestCase {
     }
 
     // MARK: - Test Vectors from JSON
-    
-    func loadTestVectors() throws -> [TestVector] {
+
+    private func loadTestVectors() throws -> [TestVector] {
         let url = Bundle.module.url(forResource: "test_vectors", withExtension: "json")!
         let data = try Data(contentsOf: url)
         return try JSONDecoder().decode([TestVector].self, from: data)
     }
-    
+
     func testAllTestVectors() throws {
         let vectors = try loadTestVectors()
-        
+
         for (index, vector) in vectors.enumerated() {
             switch vector.variant {
             case "ipcrypt-deterministic":
@@ -85,50 +90,6 @@ final class IPCryptTests: XCTestCase {
             default:
                 XCTFail("Unknown variant: \(vector.variant)")
             }
-        }
-    }
-    
-    private func testDeterministicVector(_ vector: TestVector, index: Int) throws {
-        let key = try IPCrypt.Key(hexString: vector.key, mode: .deterministic)
-        
-        let encrypted = try IPCrypt.encrypt(vector.ip, with: key)
-        XCTAssertEqual(encrypted.ipString, vector.encryptedIp!, 
-                      "Vector \(index + 1): Deterministic encryption failed for \(vector.ip)")
-        
-        let decrypted = try IPCrypt.decrypt(encrypted, with: key)
-        XCTAssertEqual(decrypted, vector.ip, 
-                      "Vector \(index + 1): Deterministic decryption failed for \(vector.ip)")
-    }
-    
-    private func testNDVector(_ vector: TestVector, index: Int) throws {
-        let key = try IPCrypt.Key(hexString: vector.key, mode: .nd)
-        
-        if let tweakHex = vector.tweak, let outputHex = vector.output {
-            let tweak = Data(hexString: tweakHex)!
-            let result = try IPCrypt.encrypt(vector.ip, with: key, tweak: tweak)
-            
-            XCTAssertEqual(result.data.hexString, outputHex.lowercased(),
-                          "Vector \(index + 1): ND encryption failed for \(vector.ip)")
-            
-            let decrypted = try IPCrypt.decrypt(result, with: key)
-            XCTAssertEqual(decrypted, vector.ip,
-                          "Vector \(index + 1): ND decryption failed for \(vector.ip)")
-        }
-    }
-    
-    private func testNDXVector(_ vector: TestVector, index: Int) throws {
-        let key = try IPCrypt.Key(hexString: vector.key, mode: .ndx)
-        
-        if let tweakHex = vector.tweak, let outputHex = vector.output {
-            let tweak = Data(hexString: tweakHex)!
-            let result = try IPCrypt.encrypt(vector.ip, with: key, tweak: tweak)
-            
-            XCTAssertEqual(result.data.hexString, outputHex.lowercased(),
-                          "Vector \(index + 1): NDX encryption failed for \(vector.ip)")
-            
-            let decrypted = try IPCrypt.decrypt(result, with: key)
-            XCTAssertEqual(decrypted, vector.ip,
-                          "Vector \(index + 1): NDX decryption failed for \(vector.ip)")
         }
     }
 
@@ -189,7 +150,7 @@ final class IPCryptTests: XCTestCase {
 
         let ip = "0.0.0.0"
         let encrypted = try IPCrypt.encrypt(ip, with: key, tweak: tweak)
-        
+
         // This should match test vector
         XCTAssertEqual(encrypted.data.hexString, "08e0c289bff23b7cb349aadfe3bcef56221c384c7c217b16")
 
@@ -202,8 +163,7 @@ final class IPCryptTests: XCTestCase {
     func testNDXEncryption() throws {
         let key = try IPCrypt.Key(
             hexString: "0123456789abcdeffedcba98765432101032547698badcfeefcdab8967452301",
-            mode: .ndx
-        )
+            mode: .ndx)
 
         // Test with random tweak
         let encrypted1 = try IPCrypt.encrypt("192.0.2.1", with: key)
@@ -227,8 +187,7 @@ final class IPCryptTests: XCTestCase {
     func testNDXWithSpecificTweak() throws {
         let key = try IPCrypt.Key(
             hexString: "0123456789abcdeffedcba98765432101032547698badcfeefcdab8967452301",
-            mode: .ndx
-        )
+            mode: .ndx)
         let tweak = Data(hexString: "21bd1834bc088cd2b4ecbe30b70898d7")!
 
         let ip = "0.0.0.0"
@@ -248,7 +207,7 @@ final class IPCryptTests: XCTestCase {
 
         let ipv6 = "2001:db8:85a3::8a2e:370:7334"
         let encrypted = try IPCrypt.encrypt(ipv6, with: key)
-        
+
         // Should match test vector
         XCTAssertEqual(encrypted.ipString, "1eef:2352:64c8:18e6:6456:1373:f615:5032")
 
@@ -298,11 +257,57 @@ final class IPCryptTests: XCTestCase {
         ]
 
         measure {
-            for _ in 0..<10000 {
+            for _ in 0..<10_000 {
                 for ip in ips {
                     _ = try! IPCrypt.encrypt(ip, with: key)
                 }
             }
+        }
+    }
+
+    // MARK: Private
+
+    private func testDeterministicVector(_ vector: TestVector, index: Int) throws {
+        let key = try IPCrypt.Key(hexString: vector.key, mode: .deterministic)
+
+        let encrypted = try IPCrypt.encrypt(vector.ip, with: key)
+        XCTAssertEqual(encrypted.ipString, vector.encryptedIp!,
+                       "Vector \(index + 1): Deterministic encryption failed for \(vector.ip)")
+
+        let decrypted = try IPCrypt.decrypt(encrypted, with: key)
+        XCTAssertEqual(decrypted, vector.ip,
+                       "Vector \(index + 1): Deterministic decryption failed for \(vector.ip)")
+    }
+
+    private func testNDVector(_ vector: TestVector, index: Int) throws {
+        let key = try IPCrypt.Key(hexString: vector.key, mode: .nd)
+
+        if let tweakHex = vector.tweak, let outputHex = vector.output {
+            let tweak = Data(hexString: tweakHex)!
+            let result = try IPCrypt.encrypt(vector.ip, with: key, tweak: tweak)
+
+            XCTAssertEqual(result.data.hexString, outputHex.lowercased(),
+                           "Vector \(index + 1): ND encryption failed for \(vector.ip)")
+
+            let decrypted = try IPCrypt.decrypt(result, with: key)
+            XCTAssertEqual(decrypted, vector.ip,
+                           "Vector \(index + 1): ND decryption failed for \(vector.ip)")
+        }
+    }
+
+    private func testNDXVector(_ vector: TestVector, index: Int) throws {
+        let key = try IPCrypt.Key(hexString: vector.key, mode: .ndx)
+
+        if let tweakHex = vector.tweak, let outputHex = vector.output {
+            let tweak = Data(hexString: tweakHex)!
+            let result = try IPCrypt.encrypt(vector.ip, with: key, tweak: tweak)
+
+            XCTAssertEqual(result.data.hexString, outputHex.lowercased(),
+                           "Vector \(index + 1): NDX encryption failed for \(vector.ip)")
+
+            let decrypted = try IPCrypt.decrypt(result, with: key)
+            XCTAssertEqual(decrypted, vector.ip,
+                           "Vector \(index + 1): NDX decryption failed for \(vector.ip)")
         }
     }
 }

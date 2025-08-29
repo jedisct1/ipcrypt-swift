@@ -1,8 +1,84 @@
 import Foundation
 import IPCrypt
 
+// MARK: - IPCryptExamples
+
 /// Example usage of the IPCrypt Swift library demonstrating idiomatic patterns
 enum IPCryptExamples {
+    // MARK: - Integration with Codable
+
+    struct SecureLogEntry: Codable {
+        // MARK: Lifecycle
+
+        init(ip: String, action: String, key: IPCrypt.Key) throws {
+            timestamp = Date()
+            self.action = action
+
+            // Encrypt the IP and store as hex
+            let encrypted = try IPCrypt.encrypt(ip, with: key)
+            encryptedIP = encrypted.hexString
+        }
+
+        // MARK: Internal
+
+        let timestamp: Date
+        let encryptedIP: String
+        let action: String
+
+        func decryptIP(with key: IPCrypt.Key) throws -> String {
+            guard let data = Data(hexString: encryptedIP) else {
+                throw IPCrypt.Error.invalidHexString(encryptedIP)
+            }
+            return try IPCrypt.decrypt(data: data, with: key)
+        }
+    }
+
+    // MARK: - SwiftUI Integration Example
+
+    @available(macOS 10.15, iOS 13.0, *)
+    class IPCryptViewModel: ObservableObject {
+        // MARK: Internal
+
+        @Published var inputIP = ""
+        @Published var encryptedResult = ""
+        @Published var errorMessage: String?
+
+        func encrypt() {
+            errorMessage = nil
+            do {
+                let encrypted = try IPCrypt.encrypt(inputIP, with: key)
+                encryptedResult = encrypted.ipString ?? encrypted.hexString
+            } catch {
+                errorMessage = error.localizedDescription
+                encryptedResult = ""
+            }
+        }
+
+        func decrypt() {
+            errorMessage = nil
+            do {
+                // Try to decrypt from hex first, then as IP
+                let result: String
+                if let data = Data(hexString: inputIP) {
+                    result = try IPCrypt.decrypt(data: data, with: key)
+                } else {
+                    // Assume it's an encrypted IP in standard format
+                    let encrypted = try IPCrypt.EncryptedIP(
+                        mode: .deterministic,
+                        data: IPAddress(inputIP).to16Bytes())
+                    result = try IPCrypt.decrypt(encrypted, with: key)
+                }
+                encryptedResult = result
+            } catch {
+                errorMessage = error.localizedDescription
+                encryptedResult = ""
+            }
+        }
+
+        // MARK: Private
+
+        private let key = IPCrypt.Key.random(for: .deterministic)
+    }
 
     // MARK: - Basic Usage
 
@@ -10,8 +86,7 @@ enum IPCryptExamples {
         // Create a key for deterministic encryption
         let key = try IPCrypt.Key(
             hexString: "0123456789abcdeffedcba9876543210",
-            mode: .deterministic
-        )
+            mode: .deterministic)
 
         // Encrypt an IP address
         let encrypted = try IPCrypt.encrypt("192.0.2.1", with: key)
@@ -55,7 +130,7 @@ enum IPCryptExamples {
                 hexString: "0123456789abcdef", // Only 8 bytes
                 mode: .deterministic // Needs 16 bytes
             )
-        } catch IPCrypt.Error.invalidKeyLength(let expected, let actual) {
+        } catch let IPCrypt.Error.invalidKeyLength(expected, actual) {
             print("Key length error: expected \(expected), got \(actual)")
         } catch {
             print("Unexpected error: \(error)")
@@ -67,11 +142,11 @@ enum IPCryptExamples {
         }
 
         switch result {
-        case .success(let key):
+        case let .success(key):
             print("Created key: \(key)")
-        case .failure(IPCrypt.Error.invalidHexString(let hex)):
+        case let .failure(IPCrypt.Error.invalidHexString(hex)):
             print("Invalid hex: \(hex)")
-        case .failure(let error):
+        case let .failure(error):
             print("Other error: \(error)")
         }
     }
@@ -95,30 +170,6 @@ enum IPCryptExamples {
         assert(ips == decrypted, "Round-trip should preserve IPs")
     }
 
-    // MARK: - Integration with Codable
-
-    struct SecureLogEntry: Codable {
-        let timestamp: Date
-        let encryptedIP: String
-        let action: String
-
-        init(ip: String, action: String, key: IPCrypt.Key) throws {
-            self.timestamp = Date()
-            self.action = action
-
-            // Encrypt the IP and store as hex
-            let encrypted = try IPCrypt.encrypt(ip, with: key)
-            self.encryptedIP = encrypted.hexString
-        }
-
-        func decryptIP(with key: IPCrypt.Key) throws -> String {
-            guard let data = Data(hexString: encryptedIP) else {
-                throw IPCrypt.Error.invalidHexString(encryptedIP)
-            }
-            return try IPCrypt.decrypt(data: data, with: key)
-        }
-    }
-
     static func codableIntegration() throws {
         let key = IPCrypt.Key.random(for: .nd)
 
@@ -126,8 +177,7 @@ enum IPCryptExamples {
         let entry = try SecureLogEntry(
             ip: "192.0.2.1",
             action: "LOGIN",
-            key: key
-        )
+            key: key)
 
         // Encode to JSON
         let encoder = JSONEncoder()
@@ -169,50 +219,6 @@ enum IPCryptExamples {
         print("Encrypted \(encrypted.count) IPs concurrently")
     }
 
-    // MARK: - SwiftUI Integration Example
-
-    @available(macOS 10.15, iOS 13.0, *)
-    class IPCryptViewModel: ObservableObject {
-        @Published var inputIP = ""
-        @Published var encryptedResult = ""
-        @Published var errorMessage: String?
-
-        private let key = IPCrypt.Key.random(for: .deterministic)
-
-        func encrypt() {
-            errorMessage = nil
-            do {
-                let encrypted = try IPCrypt.encrypt(inputIP, with: key)
-                encryptedResult = encrypted.ipString ?? encrypted.hexString
-            } catch {
-                errorMessage = error.localizedDescription
-                encryptedResult = ""
-            }
-        }
-
-        func decrypt() {
-            errorMessage = nil
-            do {
-                // Try to decrypt from hex first, then as IP
-                let result: String
-                if let data = Data(hexString: inputIP) {
-                    result = try IPCrypt.decrypt(data: data, with: key)
-                } else {
-                    // Assume it's an encrypted IP in standard format
-                    let encrypted = IPCrypt.EncryptedIP(
-                        mode: .deterministic,
-                        data: try IPAddress(inputIP).to16Bytes()
-                    )
-                    result = try IPCrypt.decrypt(encrypted, with: key)
-                }
-                encryptedResult = result
-            } catch {
-                errorMessage = error.localizedDescription
-                encryptedResult = ""
-            }
-        }
-    }
-
     // MARK: - Main Example Runner
 
     static func runAllExamples() throws {
@@ -241,7 +247,7 @@ enum IPCryptExamples {
 }
 
 // Helper to make IPAddress available for the example
-fileprivate extension IPAddress {
+private extension IPAddress {
     init(_ string: String) throws {
         if let v4 = IPv4Address(string) {
             self = .v4(v4.rawValue)
@@ -254,19 +260,19 @@ fileprivate extension IPAddress {
 
     func to16Bytes() -> Data {
         switch self {
-        case .v4(let data):
+        case let .v4(data):
             var result = Data(repeating: 0, count: 10)
             result.append(contentsOf: [0xFF, 0xFF])
             result.append(data)
             return result
-        case .v6(let data):
+        case let .v6(data):
             return data
         }
     }
 }
 
 // Make IPAddress accessible
-fileprivate enum IPAddress {
+private enum IPAddress {
     case v4(Data)
     case v6(Data)
 }

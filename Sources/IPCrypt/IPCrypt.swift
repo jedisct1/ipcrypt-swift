@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - IPCrypt
+
 /// IPCrypt provides methods for encrypting and obfuscating IP addresses
 /// according to the IPCrypt specification.
 ///
@@ -20,6 +22,8 @@ import Foundation
 /// let original = try IPCrypt.decrypt(encrypted, with: key)
 /// ```
 public enum IPCrypt {
+    // MARK: Public
+
     // MARK: - Error Types
 
     /// Errors that can occur during IPCrypt operations.
@@ -38,6 +42,8 @@ public enum IPCrypt {
         /// The provided string is not valid hexadecimal
         case invalidHexString(String)
 
+        // MARK: Public
+
         public var errorDescription: String? {
             switch self {
             case let .invalidKeyLength(expected, actual):
@@ -46,9 +52,9 @@ public enum IPCrypt {
                 return "Invalid tweak length: expected \(expected) bytes, got \(actual)"
             case let .invalidDataLength(expected, actual):
                 return "Invalid data length: expected \(expected) bytes, got \(actual)"
-            case .invalidIPAddress(let address):
+            case let .invalidIPAddress(address):
                 return "Invalid IP address: \(address)"
-            case .invalidHexString(let hex):
+            case let .invalidHexString(hex):
                 return "Invalid hexadecimal string: \(hex)"
             }
         }
@@ -69,6 +75,8 @@ public enum IPCrypt {
         case nd
         /// Non-deterministic AES-XTS with 16-byte tweak (32-byte output)
         case ndx
+
+        // MARK: Public
 
         /// Required key length for this mode in bytes
         public var keyLength: Int {
@@ -106,8 +114,7 @@ public enum IPCrypt {
     /// - Deterministic/ND modes: 16 bytes (128 bits)
     /// - NDX mode: 32 bytes (256 bits)
     public struct Key {
-        public let data: Data
-        public let mode: Mode
+        // MARK: Lifecycle
 
         /// Initialize a key with raw bytes
         /// - Parameters:
@@ -133,6 +140,11 @@ public enum IPCrypt {
             }
             try self.init(data: data, mode: mode)
         }
+
+        // MARK: Public
+
+        public let data: Data
+        public let mode: Mode
 
         /// Generate a random key for the specified mode.
         ///
@@ -162,6 +174,25 @@ public enum IPCrypt {
     /// - For ND mode: 8-byte tweak + 16-byte ciphertext (24 bytes total)
     /// - For NDX mode: 16-byte tweak + 16-byte ciphertext (32 bytes total)
     public struct EncryptedIP: Equatable {
+        // MARK: Lifecycle
+
+        public init(mode: Mode, data: Data, tweak: Data? = nil) {
+            self.mode = mode
+            self.data = data
+            self.tweak = tweak
+
+            switch mode {
+            case .deterministic:
+                ciphertext = data
+            case .nd:
+                ciphertext = Data(data[8...])
+            case .ndx:
+                ciphertext = Data(data[16...])
+            }
+        }
+
+        // MARK: Public
+
         /// The encryption mode used
         public let mode: Mode
         /// The encrypted data (including tweak for non-deterministic modes)
@@ -194,21 +225,6 @@ public enum IPCrypt {
         public var ipString: String? {
             guard mode == .deterministic else { return nil }
             return (try? IPAddress(from: ciphertext))?.stringValue
-        }
-
-        public init(mode: Mode, data: Data, tweak: Data? = nil) {
-            self.mode = mode
-            self.data = data
-            self.tweak = tweak
-
-            switch mode {
-            case .deterministic:
-                self.ciphertext = data
-            case .nd:
-                self.ciphertext = Data(data[8...])
-            case .ndx:
-                self.ciphertext = Data(data[16...])
-            }
         }
     }
 
@@ -298,6 +314,8 @@ public enum IPCrypt {
         let encrypted = EncryptedIP(mode: key.mode, data: data)
         return try decrypt(encrypted, with: key)
     }
+
+    // MARK: Private
 
     // MARK: - Private Implementation
 
