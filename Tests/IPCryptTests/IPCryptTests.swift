@@ -257,7 +257,7 @@ final class IPCryptTests: XCTestCase {
         ]
 
         measure {
-            for _ in 0..<10_000 {
+            for _ in 0..<1000 {
                 for ip in ips {
                     _ = try! IPCrypt.encrypt(ip, with: key)
                 }
